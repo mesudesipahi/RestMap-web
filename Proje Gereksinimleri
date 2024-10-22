@@ -1,0 +1,10 @@
+URL Girişi: Kullanıcı, analiz edilmesini istediği mekanın URL'sini girecek bir form alanı.
+Analiz Butonu: Kullanıcı, URL'yi girdikten sonra analiz başlatmak için bir butona basacak.
+Sonuçlar Bölümü: Analiz edilen sonuçların gösterileceği bir bölüm (örneğin, yorumlar, puanlar).
+Harita Görüntüleme: Mekanın harita üzerinde gösterilmesi.
+Web Kaynağı Alma: Kullanıcının girdiği URL'deki sayfadan veri (metin, yorumlar, puanlar vb.) çekilecek.
+Metin Analizi: Çekilen verilerde yorumlar, puanlar, kullanıcı değerlendirmeleri gibi içerikler analiz edilecek.
+Veri İşleme: Alınan veriler sınıflandırılacak (örneğin pozitif, nötr, negatif yorumlar).
+Konum Belirleme: URL'deki mekanın açık adresi varsa, bu adresin harita üzerinde gösterilmesi.
+Harita Entegrasyonu: Google Maps API veya başka bir harita sağlayıcısı kullanarak, mekanın harita üzerinde işaretlenmesi.
+Haritada Yönlendirme: Kullanıcıya mekanın konumunu görmek ve ulaşım bilgilerini almak için harita üzerinde yönlendirme.
