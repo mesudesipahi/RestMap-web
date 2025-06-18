@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RestMap</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    
+    <!-- Font Awesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Kendi CSS dosyamız -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Başlık -->
+        <header>
+            <h1><i class="fas fa-map-marker-alt"></i> RestMap</h1>
+            <p>Konumunuzu bulup yakınındaki restoran ve kafeleri keşfedin!</p>
+        </header>
+
+        <!-- API Key ayarları -->
+        <div id="apiSettingsContainer" class="api-settings" style="display: none;">
+            <div class="api-settings-content">
+                <h4><i class="fas fa-key"></i> API Ayarları</h4>
+                <p>Fotoğraflar için Unsplash API key'i girin (opsiyonel):</p>
+                <div class="api-input-group">
+                    <input type="text" id="unsplashApiKey" placeholder="Unsplash Access Key">
+                    <button id="saveApiKeyBtn" class="btn-secondary">Kaydet</button>
+                </div>
+                <small>Unsplash API key'i olmadan da temel fotoğraflar gösterilir.</small>
+            </div>
+        </div>
+
+        <!-- Kontroller -->
+        <div class="controls">
+            <button id="findLocationBtn" class="btn-primary">
+                <i class="fas fa-crosshairs"></i> Konumumu Bul
+            </button>
+            <button id="toggleApiSettings" class="btn-settings" title="API Ayarları">
+                <i class="fas fa-cog"></i>
+            </button>
+            <button id="showStatsBtn" class="btn-stats" title="İstatistikler">
+                <i class="fas fa-chart-bar"></i>
+            </button>
+            <div id="locationStatus" class="status-message"></div>
+            
+            <!-- Filtreler -->
+            <div id="filtersContainer" class="filters-container" style="display: none;">
+                <h4><i class="fas fa-filter"></i> Filtreler</h4>
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label>Mekan Tipi:</label>
+                        <select id="typeFilter">
+                            <option value="all">Tümü</option>
+                            <option value="restaurant">Restoran</option>
+                            <option value="cafe">Kafe</option>
+                            <option value="fast_food">Fast Food</option>
+                            <option value="bar">Bar</option>
+                            <option value="pub">Pub</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Maksimum Mesafe:</label>
+                        <select id="distanceFilter">
+                            <option value="5">5 km</option>
+                            <option value="2">2 km</option>
+                            <option value="1" selected>1 km</option>
+                            <option value="0.5">500 m</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Sıralama:</label>
+                        <select id="sortFilter">
+                            <option value="distance">Mesafeye Göre</option>
+                            <option value="name">İsme Göre</option>
+                        </select>
+                    </div>
+                    
+                    <button id="applyFiltersBtn" class="btn-secondary">
+                        <i class="fas fa-search"></i> Filtrele
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ana içerik alanı -->
+        <div class="main-content">
+            <!-- Harita alanı -->
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+
+            <!-- Sonuçlar paneli -->
+            <div class="results-panel">
+                <div class="results-header">
+                    <h3><i class="fas fa-list"></i> Yakındaki Mekanlar</h3>
+                    <div id="resultsCount" class="results-count"></div>
+                </div>
+                <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Aranıyor...
+                </div>
+                <div id="resultsContainer" class="results-container">
+                    <p class="no-results">Konum bulunduğunda yakındaki mekanlar burada görünecek.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detay Modal -->
+    <div id="placeModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Mekan Detayları</h2>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="modalContent">
+                    <!-- Dinamik içerik buraya gelecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- İstatistikler Modal -->
+    <div id="statsModal" class="modal" style="display: none;">
+        <div class="modal-content stats-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-chart-bar"></i> İstatistikler & Favoriler</h2>
+                <button class="modal-close" onclick="closeStatsModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="statsContent">
+                    <!-- Dinamik içerik buraya gelecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Not Modal -->
+    <div id="noteModal" class="modal" style="display: none;">
+        <div class="modal-content note-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-sticky-note"></i> <span id="noteModalTitle">Not Ekle</span></h2>
+                <button class="modal-close" onclick="closeNoteModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="note-form">
+                    <div class="note-place-info">
+                        <div id="notePlaceName" class="note-place-name"></div>
+                        <div id="notePlaceAddress" class="note-place-address"></div>
+                    </div>
+                    <div class="note-input-group">
+                        <label for="noteTextarea">Notunuz:</label>
+                        <textarea 
+                            id="noteTextarea" 
+                            placeholder="Bu mekan hakkındaki düşüncelerinizi yazın... (örn: 'Kahveleri çok güzel', 'Gürültülü ortam', 'Fiyatlar makul')"
+                            maxlength="500"
+                            rows="6"
+                        ></textarea>
+                        <div class="char-counter">
+                            <span id="charCount">0</span>/500 karakter
+                        </div>
+                    </div>
+                    <div class="note-suggestions">
+                        <label>Hızlı Notlar:</label>
+                        <div class="suggestion-tags">
+                            <button type="button" class="suggestion-tag" onclick="addSuggestion('Kahveleri mükemmel ☕')">☕ Kahve güzel</button>
+                            <button type="button" class="suggestion-tag" onclick="addSuggestion('Hızlı servis 🚀')">🚀 Hızlı servis</button>
+                            <button type="button" class="suggestion-tag" onclick="addSuggestion('Sakin ortam 🌿')">🌿 Sakin ortam</button>
+                            <button type="button" class="suggestion-tag" onclick="addSuggestion('Fiyatlar uygun 💰')">💰 Uygun fiyat</button>
+                            <button type="button" class="suggestion-tag" onclick="addSuggestion('WiFi hızlı 📶')">📶 İyi WiFi</button>
+                            <button type="button" class="suggestion-tag" onclick="addSuggestion('Gürültülü ortam 🔊')">🔊 Gürültülü</button>
+                        </div>
+                    </div>
+                    <div class="note-actions">
+                        <button id="saveNoteBtn" class="btn-primary" onclick="saveUserNote()">
+                            <i class="fas fa-save"></i> Kaydet
+                        </button>
+                        <button id="deleteNoteBtn" class="btn-danger" onclick="deleteUserNote()" style="display: none;">
+                            <i class="fas fa-trash"></i> Sil
+                        </button>
+                        <button class="btn-secondary" onclick="closeNoteModal()">
+                            <i class="fas fa-times"></i> İptal
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Etiket Modal -->
+    <div id="tagsModal" class="modal" style="display: none;">
+        <div class="modal-content tags-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-tags"></i> <span id="tagsModalTitle">Etiketler</span></h2>
+                <button class="modal-close" onclick="closeTagsModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="tags-form">
+                    <div class="tags-place-info">
+                        <div id="tagsPlaceName" class="tags-place-name"></div>
+                        <div id="tagsPlaceAddress" class="tags-place-address"></div>
+                    </div>
+                    
+                    <!-- Mevcut Etiketler -->
+                    <div class="current-tags-section">
+                        <label>Mevcut Etiketler:</label>
+                        <div id="currentTagsList" class="current-tags-list">
+                            <!-- Dinamik olarak doldurulacak -->
+                        </div>
+                    </div>
+                    
+                    <!-- Önerilen Etiketler -->
+                    <div class="suggested-tags-section">
+                        <label>Önerilen Etiketler:</label>
+                        <div class="suggested-tags-grid">
+                            <!-- Yemek & İçecek -->
+                            <div class="tag-category">
+                                <h5>🍽️ Yemek & İçecek</h5>
+                                <div class="tag-options">
+                                    <button type="button" class="tag-option" data-tag="lezzetli">😋 Lezzetli</button>
+                                    <button type="button" class="tag-option" data-tag="kahve-guzel">☕ Kahve Güzel</button>
+                                    <button type="button" class="tag-option" data-tag="fresh-food">🥗 Taze Yemek</button>
+                                    <button type="button" class="tag-option" data-tag="dessert">🍰 Tatlı Güzel</button>
+                                    <button type="button" class="tag-option" data-tag="breakfast">🥞 Kahvaltı</button>
+                                    <button type="button" class="tag-option" data-tag="pizza">🍕 Pizza</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Fiyat -->
+                            <div class="tag-category">
+                                <h5>💰 Fiyat</h5>
+                                <div class="tag-options">
+                                    <button type="button" class="tag-option" data-tag="ucuz">💚 Uygun Fiyat</button>
+                                    <button type="button" class="tag-option" data-tag="orta-fiyat">💛 Orta Fiyat</button>
+                                    <button type="button" class="tag-option" data-tag="pahali">💸 Pahalı</button>
+                                    <button type="button" class="tag-option" data-tag="student-friendly">🎓 Öğrenci Dostu</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Ortam -->
+                            <div class="tag-category">
+                                <h5>🌟 Ortam</h5>
+                                <div class="tag-options">
+                                    <button type="button" class="tag-option" data-tag="sakin">🌿 Sakin</button>
+                                    <button type="button" class="tag-option" data-tag="gurultulu">🔊 Gürültülü</button>
+                                    <button type="button" class="tag-option" data-tag="romantik">💕 Romantik</button>
+                                    <button type="button" class="tag-option" data-tag="aile-dostu">👨‍👩‍👧‍👦 Aile Dostu</button>
+                                    <button type="button" class="tag-option" data-tag="modern">✨ Modern</button>
+                                    <button type="button" class="tag-option" data-tag="retro">📻 Retro</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Servis -->
+                            <div class="tag-category">
+                                <h5>⚡ Servis</h5>
+                                <div class="tag-options">
+                                    <button type="button" class="tag-option" data-tag="hizli-servis">🚀 Hızlı Servis</button>
+                                    <button type="button" class="tag-option" data-tag="yavas-servis">🐌 Yavaş Servis</button>
+                                    <button type="button" class="tag-option" data-tag="guler-yuzlu">😊 Güler Yüzlü</button>
+                                    <button type="button" class="tag-option" data-tag="delivery">🚚 Teslimat Var</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Özellikler -->
+                            <div class="tag-category">
+                                <h5>📶 Özellikler</h5>
+                                <div class="tag-options">
+                                    <button type="button" class="tag-option" data-tag="wifi-hizli">📶 WiFi Hızlı</button>
+                                    <button type="button" class="tag-option" data-tag="wifi-yok">📵 WiFi Yok</button>
+                                    <button type="button" class="tag-option" data-tag="acik-alan">🌳 Açık Alan</button>
+                                    <button type="button" class="tag-option" data-tag="otopark">🚗 Otopark</button>
+                                    <button type="button" class="tag-option" data-tag="erisilebilir">♿ Erişilebilir</button>
+                                    <button type="button" class="tag-option" data-tag="sigara-icilmez">🚭 Sigara İçilmez</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Özel Etiket Ekleme -->
+                    <div class="custom-tag-section">
+                        <label for="customTagInput">Özel Etiket Ekle:</label>
+                        <div class="custom-tag-input-group">
+                            <input type="text" id="customTagInput" placeholder="Özel etiket yazın..." maxlength="20">
+                            <button type="button" id="addCustomTagBtn" onclick="addCustomTag()">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="tags-actions">
+                        <button id="saveTagsBtn" class="btn-primary" onclick="savePlaceTags()">
+                            <i class="fas fa-save"></i> Kaydet
+                        </button>
+                        <button class="btn-secondary" onclick="closeTagsModal()">
+                            <i class="fas fa-times"></i> İptal
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript kütüphaneleri -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    
+    <!-- Kendi JavaScript dosyamız -->
+    <script src="script.js"></script>
+</body>
+</html>
